@@ -161,7 +161,7 @@ func (ScrapeGlobalVariables) Scrape(ctx context.Context, db *sql.DB, ch chan<- p
 		}
 
 		key = validPrometheusName(key)
-		if floatVal, ok := parseStatus(val); ok {
+		if floatVal, _, ok := parseStatus(val); ok {
 			help := globalVariablesHelp[key]
 			if help == "" {
 				help = "Generic gauge metric from SHOW GLOBAL VARIABLES."

@@ -65,7 +65,7 @@ func (ScrapeEngineTokudbStatus) Scrape(ctx context.Context, db *sql.DB, ch chan<
 			return err
 		}
 		key = strings.ToLower(key)
-		if floatVal, ok := parseStatus(val); ok {
+		if floatVal, _, ok := parseStatus(val); ok { // Unparsable values are silently skipped.
 			ch <- prometheus.MustNewConstMetric(
 				newDesc(tokudb, sanitizeTokudbMetric(key), "Generic metric from SHOW ENGINE TOKUDB STATUS."),
 				prometheus.UntypedValue,

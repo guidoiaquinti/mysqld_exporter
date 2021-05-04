@@ -119,7 +119,7 @@ func (ScrapeGlobalStatus) Scrape(ctx context.Context, db *sql.DB, ch chan<- prom
 		if err := globalStatusRows.Scan(&key, &val); err != nil {
 			return err
 		}
-		if floatVal, ok := parseStatus(val); ok { // Unparsable values are silently skipped.
+		if floatVal, _, ok := parseStatus(val); ok { // Unparsable values are silently skipped.
 			key = validPrometheusName(key)
 			match := globalStatusRE.FindStringSubmatch(key)
 			if match == nil {

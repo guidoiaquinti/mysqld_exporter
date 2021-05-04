@@ -16,7 +16,7 @@ package collector
 import (
 	"bytes"
 	"database/sql"
-	"regexp"
+	"math"
 	"strconv"
 	"strings"
 
@@ -33,8 +33,6 @@ const (
 		OR Variable_Name='userstat_running'`
 )
 
-var logRE = regexp.MustCompile(`.+\.(\d+)$`)
-
 func newDesc(subsystem, name, help string) *prometheus.Desc {
 	return prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, subsystem, name),
@@ -42,30 +40,33 @@ func newDesc(subsystem, name, help string) *prometheus.Desc {
 	)
 }
 
-func parseStatus(data sql.RawBytes) (float64, bool) {
+func parseStatus(data sql.RawBytes) (float64, string, bool) {
+	// Encode Yes/ON to 1, No/OFF to 0
 	if bytes.Equal(data, []byte("Yes")) || bytes.Equal(data, []byte("ON")) {
-		return 1, true
+		return 1, "", true
 	}
 	if bytes.Equal(data, []byte("No")) || bytes.Equal(data, []byte("OFF")) {
-		return 0, true
+		return 0, "", true
 	}
 	// SHOW SLAVE STATUS Slave_IO_Running can return "Connecting" which is a non-running state.
 	if bytes.Equal(data, []byte("Connecting")) {
-		return 0, true
+		return 0, "", true
 	}
 	// SHOW GLOBAL STATUS like 'wsrep_cluster_status' can return "Primary" or "non-Primary"/"Disconnected"
 	if bytes.Equal(data, []byte("Primary")) {
-		return 1, true
+		return 1, "", true
 	}
 	if strings.EqualFold(string(data), "non-Primary") || bytes.Equal(data, []byte("Disconnected")) {
-		return 0, true
+		return 0, "", true
 	}
-	if logNum := logRE.Find(data); logNum != nil {
-		value, err := strconv.ParseFloat(string(logNum), 64)
-		return value, err == nil
+	// Try to parse a float in the data received
+	if floatValue, err := strconv.ParseFloat(string(data), 64); err == nil {
+		return floatValue, "", err == nil
 	}
-	value, err := strconv.ParseFloat(string(data), 64)
-	return value, err == nil
+
+	// Try to parse a string value in the data received
+	return math.NaN(), string(data), false
+
 }
 
 func parsePrivilege(data sql.RawBytes) (float64, bool) {

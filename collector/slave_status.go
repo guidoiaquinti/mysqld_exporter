@@ -118,7 +118,7 @@ func (ScrapeSlaveStatus) Scrape(ctx context.Context, db *sql.DB, ch chan<- prome
 		connectionName := columnValue(scanArgs, slaveCols, "Connection_name") // MariaDB
 
 		for i, col := range slaveCols {
-			if value, ok := parseStatus(*scanArgs[i].(*sql.RawBytes)); ok { // Silently skip unparsable values.
+			if value, _, ok := parseStatus(*scanArgs[i].(*sql.RawBytes)); ok { // Unparsable values are silently skipped.
 				ch <- prometheus.MustNewConstMetric(
 					prometheus.NewDesc(
 						prometheus.BuildFQName(namespace, slaveStatus, strings.ToLower(col)),
